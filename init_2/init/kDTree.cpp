@@ -455,7 +455,8 @@ kNN::kNN(int k)
     y_train = 0;
 }
 
-*/ Start research from 03.05.2024. Please work */
-void kNN::fit(Dataset &X_train, Dataset &y_train) {
+/* Start research from 03.05.2024. Please work */
+void kNN::fit(Dataset &X_train, Dataset &y_train) 
+{
     
 }
