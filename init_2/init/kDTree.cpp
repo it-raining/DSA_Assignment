@@ -3,19 +3,27 @@
 /////////////////////////////kD-tree///////////////////////////////////
 /* TODO: You can implement methods, functions that support your data structures here.
  * */
-void merge(vector<vector<int>> &vec, int l, int m, int r, int axis)
+void merge(vector<vector<int>> &vec, vector<int> &label, int l, int m, int r, int axis)
 {
     int i, j, k;
     int n1 = m - l + 1;
     int n2 = r - m;
 
     vector<vector<int>> L(n1, vector<int>(vec[0].size()));
+    vector<int> L_label(n1, 0);
     vector<vector<int>> R(n2, vector<int>(vec[0].size()));
+    vector<int> R_label(n2, 0);
 
     for (i = 0; i < n1; i++)
+    {
         L[i] = vec[l + i];
+        L_label[i] = label[l + i];
+    }
     for (j = 0; j < n2; j++)
+    {
         R[j] = vec[m + 1 + j];
+        R_label[j] = label[m + 1 + j];
+    }
     i = 0; // Initial index of first subvector
     j = 0; // Initial index of second subvector
     k = l; // Initial index of middle subvector
@@ -24,11 +32,13 @@ void merge(vector<vector<int>> &vec, int l, int m, int r, int axis)
         if (L[i][axis] <= R[j][axis])
         {
             vec[k] = L[i];
+            label[k] = L_label[i];
             i++;
         }
         else
         {
             vec[k] = R[j];
+            label[k] = R_label[j];
             j++;
         }
         k++;
@@ -36,26 +46,28 @@ void merge(vector<vector<int>> &vec, int l, int m, int r, int axis)
     while (i < n1)
     {
         vec[k] = L[i];
+        label[k] = L_label[i];
         i++;
         k++;
     }
     while (j < n2)
     {
         vec[k] = R[j];
+        label[k] = R_label[j];
         j++;
         k++;
     }
 }
 
-void mergeSort(vector<vector<int>> &vec, int l, int r, int axis)
+void mergeSort(vector<vector<int>> &vec, vector<int> &label, int l, int r, int axis)
 {
     if (l < r)
     {
         int m = l + (r - l) / 2;
-        mergeSort(vec, l, m, axis);
-        mergeSort(vec, m + 1, r, axis);
+        mergeSort(vec, label, l, m, axis);
+        mergeSort(vec, label, m + 1, r, axis);
 
-        merge(vec, l, m, r, axis);
+        merge(vec, label, l, m, r, axis);
     }
 }
 
@@ -139,7 +151,7 @@ kDTreeNode *copyNode(kDTreeNode *node)
     {
         return nullptr;
     }
-    kDTreeNode *newNode = new kDTreeNode(node->data, copyNode(node->left), copyNode(node->right));
+    kDTreeNode *newNode = new kDTreeNode(node->data, node->label, copyNode(node->left), copyNode(node->right));
     return newNode;
 }
 bool kDTreeNode::operator==(const kDTreeNode &b)
@@ -182,6 +194,7 @@ void kDTree::clearRec(kDTreeNode *node)
     clearRec(node->left);
     clearRec(node->right);
     node->data.clear();
+    node->label = 0;
     delete node;
 }
 void kDTree::clear()
@@ -256,6 +269,28 @@ kDTreeNode *kDTree::insertRec(kDTreeNode *node, const vector<int> &point, int de
     }
     return node;
 }
+kDTreeNode *kDTree::buildTreeRec(vector<vector<int>> &points, vector<int> &label, int start, int end, int depth)
+{
+    if (start > end)
+    {
+        return nullptr;
+    }
+    int axis = depth % k;
+    mergeSort(points, label, start, end, axis);
+
+    int mid = start + (end - start) / 2;
+
+    kDTreeNode *node = new kDTreeNode(points[mid], label[mid]);
+
+    node->left = buildTreeRec(points, label, start, mid - 1, depth + 1);
+    node->right = buildTreeRec(points, label, mid + 1, end, depth + 1);
+    return node;
+}
+void kDTree::buildTree(const vector<vector<int>> &pointList, vector<int> &label)
+{
+    vector<vector<int>> points = pointList;
+    root = buildTreeRec(points, label, 0, points.size() - 1, 0);
+}
 kDTreeNode *kDTree::buildTreeRec(vector<vector<int>> &points, int start, int end, int depth)
 {
     if (start > end)
@@ -263,7 +298,8 @@ kDTreeNode *kDTree::buildTreeRec(vector<vector<int>> &points, int start, int end
         return nullptr;
     }
     int axis = depth % k;
-    mergeSort(points, start, end, axis);
+    vector<int> tmp(0, 0);
+    mergeSort(points, tmp, start, end, axis);
 
     int mid = start + (end - start) / 2;
 
@@ -453,10 +489,71 @@ kNN::kNN(int k)
     this->k = k;
     X_train = 0;
     y_train = 0;
+    tree = new kDTree(k);
+}
+kNN::~kNN()
+{
+    tree->clear();
 }
 
 /* Start research from 03.05.2024. Please work */
-void kNN::fit(Dataset &X_train, Dataset &y_train) 
+void kNN::fit(Dataset &X_train, Dataset &y_train)
 {
-    
+    this->X_train = new Dataset(X_train);
+    this->y_train = new Dataset(y_train);
+    vector<int> label;
+    for (const auto &sublist : y_train.data)
+    {
+        label.push_back(*(sublist.begin()));
+    }
+
+    vector<vector<int>> data;
+    for (const auto &sublist : X_train.data)
+    {
+        data.push_back(vector<int>(sublist.begin(), sublist.end()));
+    }
+    if (this->tree == nullptr)
+    {
+        this->tree = new kDTree(X_train.data.size());
+    }
+
+    this->tree->buildTree(data, label);
+}
+Dataset kNN::predict(Dataset &X_test)
+{
+    Dataset *y_pred = new Dataset();
+    y_pred->columnName.push_back("label");
+    vector<vector<int>> data;
+    vector<kDTreeNode *> best;
+    for (const auto &sublist : X_test.data)
+    {
+        data.push_back(vector<int>(sublist.begin(), sublist.end()));
+    }
+    for (auto i : data)
+    {
+        tree->kNearestNeighbour(i, k, best);
+        int sort_label[10] = {0};
+        for (auto j : best)
+            sort_label[j->label]++;
+        int max_index = 0;
+        for (int k = 0; k < 10; k++)
+        {
+            if (sort_label[k] < sort_label[max_index])
+                max_index = k;
+        }
+        y_pred->data.push_back(list<int>{max_index});
+    }
+    return *y_pred;
+}
+
+/* End research in 04.05.2024. Idk */
+
+double kNN::score(const Dataset &y_test, const Dataset &y_pred)
+{
+    double correctCount = 0;
+    int totalCount = y_test.data.size();
+    for (auto i = y_test.data.begin(), j = y_pred.data.begin(); i != y_test.data.end(), j!= y_test.data.end(); i++, j++) {
+        if (*i->begin() == *j->begin()) correctCount++;
+    }
+    return correctCount / totalCount;
 }

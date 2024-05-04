@@ -5,7 +5,6 @@ class Dataset
 private:
     list<list<int>> data;
     vector<string> columnName;
-
 public:
     Dataset();
     ~Dataset();
