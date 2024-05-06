@@ -63,6 +63,7 @@ void tc4()
     knn.fit(X_train, y_train);
     Dataset y_pred = knn.predict(X_test);
 
+
     std::cout << "y_pred" << endl;
     y_pred.printHead(10, 10);
     std::cout << endl;
@@ -92,7 +93,7 @@ void tc5()
 
 int main(int argc, const char *argv[])
 {
-    tc1();
+    tc5();
 
     return 0;
 }

@@ -91,12 +91,12 @@ void insertionSort(vector<NodeDist> &distList)
 /// @brief Prints the tree
 /// @param
 /// @param size
-void print_vector(vector<int> arr, uint32_t size)
+void print_vector(vector<int> arr, int size)
 {
     cout << "(";
     for (int i = 0; i < size; ++i)
     {
-        cout << (static_cast<int16_t>(i) ? "," : "") << arr[i];
+        cout << (static_cast<int>(i) ? "," : "") << arr[i];
     }
     cout << ")";
 }
@@ -454,10 +454,11 @@ kDTreeNode *kDTree::NNRec(const vector<int> &target, kDTreeNode *node, int depth
         next_node = node->right;
         other_node = node->left;
     }
-
+    cout << "fak ";
     kDTreeNode *best = nearest(next_node, NNRec(target, next_node, depth + 1), node);
     if (this->distance(target, best->data) > (target[axis] - node->data[axis]) * (target[axis] - node->data[axis]))
     {
+        cout << " ok this is wrong ";
         best = nearest(other_node, NNRec(target, other_node, depth + 1), best);
     }
     return best;
@@ -470,11 +471,15 @@ void kDTree::nearestNeighbour(const vector<int> &target, kDTreeNode *best)
 void kDTree::kNearestNeighbour(const vector<int> &target, int k, vector<kDTreeNode *> &bestList)
 {
     kDTree *tmpTree = new kDTree(*this); // copy constructor
+    cout << "WHY ";
     for (int i = 0; tmpTree->root && i < k; i++)
     {
+        cout << "this " ;
         kDTreeNode *best = tmpTree->NNRec(target, tmpTree->root, 0);
+        cout << "iddiot " << endl;
         if (best)
         {
+            cout << "Not fking working ";
             bestList.push_back(best);
             tmpTree->root = tmpTree->removeRec(tmpTree->root, best->data, 0);
         }
@@ -525,13 +530,17 @@ Dataset kNN::predict(Dataset &X_test)
     y_pred->columnName.push_back("label");
     vector<vector<int>> data;
     vector<kDTreeNode *> best;
-    for (const auto &sublist : X_test.data)
+
+    list<list<int>> *X_data = &(X_test.data);
+    list<list<int>> *y_data = &(y_pred->data);
+    for (auto sublist : *(X_data))
     {
         data.push_back(vector<int>(sublist.begin(), sublist.end()));
     }
     for (auto i : data)
     {
-        tree->kNearestNeighbour(i, k, best);
+        tree->kNearestNeighbour(i, this->k, best);
+        cout << "_FOUND kNN__" << endl;
         int sort_label[10] = {0};
         for (auto j : best)
             sort_label[j->label]++;
@@ -541,7 +550,8 @@ Dataset kNN::predict(Dataset &X_test)
             if (sort_label[k] < sort_label[max_index])
                 max_index = k;
         }
-        y_pred->data.push_back(list<int>{max_index});
+        list<int> max = {max_index};
+        (*y_data).push_back(max);
     }
     return *y_pred;
 }
@@ -552,7 +562,8 @@ double kNN::score(const Dataset &y_test, const Dataset &y_pred)
 {
     double correctCount = 0;
     int totalCount = y_test.data.size();
-    for (auto i = y_test.data.begin(), j = y_pred.data.begin(); i != y_test.data.end(), j!= y_test.data.end(); i++, j++) {
+    for (auto i = y_test.data.begin(), j = y_pred.data.begin(); 
+    i != y_test.data.end(), j!= y_test.data.end(); i++, j++) {
         if (*i->begin() == *j->begin()) correctCount++;
     }
     return correctCount / totalCount;

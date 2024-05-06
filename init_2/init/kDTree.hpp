@@ -26,7 +26,7 @@ struct NodeDist
 void merge(vector<vector<int>> &vec, vector<int> &label, int l, int m, int r, int axis);
 void mergeSort(vector<vector<int>> &vec, vector<int> &label, int l, int r, int axis);
 void insertionSort(vector<NodeDist>& distList);
-void print_vector(vector<int> arr, uint32_t size);
+void print_vector(vector<int> arr, int size);
 kDTreeNode *copyNode(kDTreeNode *node);
 
 
