@@ -342,9 +342,22 @@ bool kDTree::search(const vector<int> &point)
     }
     return searchRec(root, point, 0);
 }
-void kDTree::remove(const vector<int> &point)
+kDTreeNode *kDTree::findMin(kDTreeNode *node, int axis, int depth)
 {
-    removeRec(root, point, 0);
+    if (!node)
+        return nullptr;
+    if (axis == depth % k)
+    {
+        if (node->left)
+            return findMin(node->left, axis, depth + 1);
+        else
+            return node;
+    }
+    kDTreeNode *leftMin = findMin(node->left, axis, depth + 1);
+    kDTreeNode *rightMin = findMin(node->right, axis, depth + 1);
+    kDTreeNode *minNode = (leftMin && leftMin->data[axis] < node->data[axis]) ? leftMin : node;
+    minNode = (rightMin && rightMin->data[axis] < minNode->data[axis]) ? rightMin : minNode;
+    return minNode;
 }
 kDTreeNode *kDTree::removeRec(kDTreeNode *node, const vector<int> &point, int depth)
 {
@@ -355,21 +368,20 @@ kDTreeNode *kDTree::removeRec(kDTreeNode *node, const vector<int> &point, int de
     {
         if (!node->right && !node->left)
         { // leaf node
-            node->data.clear();
             delete node;
-            return nullptr;
+            node = nullptr;
         }
         else
         {
             if (node->right)
             { // node has right child
-                kDTreeNode *tmp = findMin(node->right, axis, depth);
+                kDTreeNode *tmp = findMin(node->right, axis, depth + 1);
                 node->data = tmp->data;
                 node->right = removeRec(node->right, tmp->data, depth + 1);
             }
             else
             { // node has only left child
-                kDTreeNode *tmp = findMin(node->left, axis, depth);
+                kDTreeNode *tmp = findMin(node->left, axis, depth + 1);
                 node->data = tmp->data;
                 node->left = removeRec(node->left, tmp->data, depth + 1);
             }
@@ -386,51 +398,27 @@ kDTreeNode *kDTree::removeRec(kDTreeNode *node, const vector<int> &point, int de
 
     return node;
 }
-
-kDTreeNode *kDTree::findMin(kDTreeNode *node, int axis, int depth)
+void kDTree::remove(const vector<int> &point)
 {
-    if (!node)
-        return nullptr;
-    if (axis == depth % k)
-    {
-        if (node->left)
-            return findMin(node->left, axis, depth + 1);
-        else
-            return node;
-    }
-    kDTreeNode *leftMin = findMin(node->left, axis, depth + 1);
-    kDTreeNode *rightMin = findMin(node->right, axis, depth + 1);
-    if (rightMin && leftMin)
-    {
-        if (leftMin->data[axis] <= rightMin->data[axis])
-        {
-            return (node->data[axis] <= leftMin->data[axis]) ? node : leftMin;
-        }
-        else
-            return (node->data[axis] <= rightMin->data[axis]) ? node : rightMin;
-    }
-    else if (leftMin)
-    {
-        return (node->data[axis] <= leftMin->data[axis]) ? node : leftMin;
-    }
-    else
-        return (node->data[axis] <= rightMin->data[axis]) ? node : rightMin;
+    removeRec(root, point, 0);
 }
 
 double kDTree::distance(const vector<int> &a, const vector<int> &b)
 {
     double dist = 0;
-    for (int i = 0; i < a.size(); i++)
+    for (int i = 0; i < a.size() && i < b.size(); i++)
     {
         dist += (a[i] - b[i]) * (a[i] - b[i]);
     }
-    return (dist);
+    return sqrt(dist);
 }
-kDTreeNode *kDTree::nearest(kDTreeNode *node, kDTreeNode *cp1, kDTreeNode *cp2)
+kDTreeNode *kDTree::nearest(const vector<int> &data, kDTreeNode *cp1, kDTreeNode *cp2)
 {
-    if (!node)
-        return nullptr;
-    return (distance(node->data, cp1->data) <= distance(node->data, cp2->data))
+    if (!cp1)
+        return cp2;
+    if (!cp2)
+        return cp1;
+    return (distance(data, cp1->data) <= distance(data, cp2->data))
                ? cp1
                : cp2;
 }
@@ -444,22 +432,13 @@ kDTreeNode *kDTree::NNRec(const vector<int> &target, kDTreeNode *node, int depth
     kDTreeNode *other_node = nullptr;
     int axis = depth % k;
 
-    if (target[axis] < node->data[axis])
+    next_node = (target[axis] < node->data[axis]) ? node->left : node->right;
+    other_node = (target[axis] < node->data[axis]) ? node->right : node->left;
+
+    kDTreeNode *best = nearest(target, NNRec(target, next_node, depth + 1), node);
+    if (this->distance(target, best->data) >= (target[axis] - node->data[axis]))
     {
-        next_node = node->left;
-        other_node = node->right;
-    }
-    else
-    {
-        next_node = node->right;
-        other_node = node->left;
-    }
-    cout << "fak ";
-    kDTreeNode *best = nearest(next_node, NNRec(target, next_node, depth + 1), node);
-    if (this->distance(target, best->data) > (target[axis] - node->data[axis]) * (target[axis] - node->data[axis]))
-    {
-        cout << " ok this is wrong ";
-        best = nearest(other_node, NNRec(target, other_node, depth + 1), best);
+        best = nearest(target, NNRec(target, other_node, depth + 1), best);
     }
     return best;
 }
@@ -471,18 +450,11 @@ void kDTree::nearestNeighbour(const vector<int> &target, kDTreeNode *best)
 void kDTree::kNearestNeighbour(const vector<int> &target, int k, vector<kDTreeNode *> &bestList)
 {
     kDTree *tmpTree = new kDTree(*this); // copy constructor
-    cout << "WHY ";
     for (int i = 0; tmpTree->root && i < k; i++)
     {
-        cout << "this " ;
         kDTreeNode *best = tmpTree->NNRec(target, tmpTree->root, 0);
-        cout << "iddiot " << endl;
-        if (best)
-        {
-            cout << "Not fking working ";
-            bestList.push_back(best);
-            tmpTree->root = tmpTree->removeRec(tmpTree->root, best->data, 0);
-        }
+        bestList.push_back(new kDTreeNode(best->data, best->label));
+        tmpTree->root = tmpTree->removeRec(tmpTree->root, best->data, 0);
     }
     tmpTree->clear();
 }
@@ -519,7 +491,7 @@ void kNN::fit(Dataset &X_train, Dataset &y_train)
     }
     if (this->tree == nullptr)
     {
-        this->tree = new kDTree(X_train.data.size());
+        this->tree = new kDTree(X_train.data.size());+
     }
 
     this->tree->buildTree(data, label);
@@ -529,29 +501,26 @@ Dataset kNN::predict(Dataset &X_test)
     Dataset *y_pred = new Dataset();
     y_pred->columnName.push_back("label");
     vector<vector<int>> data;
-    vector<kDTreeNode *> best;
 
-    list<list<int>> *X_data = &(X_test.data);
-    list<list<int>> *y_data = &(y_pred->data);
-    for (auto sublist : *(X_data))
+    for (auto sublist : X_test.data)
     {
         data.push_back(vector<int>(sublist.begin(), sublist.end()));
     }
     for (auto i : data)
     {
+        vector<kDTreeNode *> best;
         tree->kNearestNeighbour(i, this->k, best);
-        cout << "_FOUND kNN__" << endl;
         int sort_label[10] = {0};
         for (auto j : best)
             sort_label[j->label]++;
         int max_index = 0;
-        for (int k = 0; k < 10; k++)
+        for (int k = 1; k < 10; k++)
         {
-            if (sort_label[k] < sort_label[max_index])
+            if (sort_label[k] > sort_label[max_index])
                 max_index = k;
         }
         list<int> max = {max_index};
-        (*y_data).push_back(max);
+        y_pred->data.push_back(max);
     }
     return *y_pred;
 }
@@ -562,9 +531,11 @@ double kNN::score(const Dataset &y_test, const Dataset &y_pred)
 {
     double correctCount = 0;
     int totalCount = y_test.data.size();
-    for (auto i = y_test.data.begin(), j = y_pred.data.begin(); 
-    i != y_test.data.end(), j!= y_test.data.end(); i++, j++) {
-        if (*i->begin() == *j->begin()) correctCount++;
+    for (auto i = y_test.data.begin(), j = y_pred.data.begin();
+         i != y_test.data.end() && j != y_pred.data.end(); i++, j++)
+    {
+        if (*i->begin() == *j->begin())
+            correctCount++;
     }
     return correctCount / totalCount;
 }

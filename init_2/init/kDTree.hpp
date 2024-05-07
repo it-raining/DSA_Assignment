@@ -9,7 +9,7 @@ struct kDTreeNode
     vector<int> data;
     kDTreeNode *left;
     kDTreeNode *right;
-    kDTreeNode(vector<int> data,int label = 0, kDTreeNode *left = nullptr, kDTreeNode *right = nullptr)
+    kDTreeNode(vector<int> data, int label = 0, kDTreeNode *left = nullptr, kDTreeNode *right = nullptr)
     {
         this->label = label;
         this->data = data;
@@ -25,10 +25,9 @@ struct NodeDist
 };
 void merge(vector<vector<int>> &vec, vector<int> &label, int l, int m, int r, int axis);
 void mergeSort(vector<vector<int>> &vec, vector<int> &label, int l, int r, int axis);
-void insertionSort(vector<NodeDist>& distList);
+void insertionSort(vector<NodeDist> &distList);
 void print_vector(vector<int> arr, int size);
 kDTreeNode *copyNode(kDTreeNode *node);
-
 
 class kDTree
 {
@@ -75,10 +74,9 @@ public:
     kDTreeNode *findMin(kDTreeNode *node, int axis, int depth);
     kDTreeNode *removeRec(kDTreeNode *node, const vector<int> &point, int depth);
     double distance(const vector<int> &a, const vector<int> &b);
-    kDTreeNode *nearest(kDTreeNode *node, kDTreeNode *cp1, kDTreeNode *cp2); //return the nearer node
+    kDTreeNode *nearest(const vector<int> &data, kDTreeNode *cp1, kDTreeNode *cp2);
     kDTreeNode *NNRec(const vector<int> &target, kDTreeNode *node, int depth); // shitty recursion (I hate this)s
 };
-
 
 class kNN
 {
@@ -88,6 +86,7 @@ private:
     Dataset *y_train;
     int numClasses;
     kDTree *tree;
+
 public:
     kNN(int k = 5);
     ~kNN();
