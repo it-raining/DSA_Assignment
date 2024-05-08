@@ -29,7 +29,7 @@ void merge(vector<vector<int>> &vec, vector<int> &label, int l, int m, int r, in
     k = l; // Initial index of middle subvector
     while (i < n1 && j < n2)
     {
-        if (L[i][axis] <= R[j][axis])  // carefully the equal
+        if (L[i][axis] <= R[j][axis]) // carefully the equal
         {
             vec[k] = L[i];
             label[k] = L_label[i];
@@ -368,6 +368,8 @@ kDTreeNode *kDTree::removeRec(kDTreeNode *node, const vector<int> &point, int de
     {
         if (!node->right && !node->left)
         { // leaf node
+            node->label = -1;
+            node->data.clear();
             delete node;
             node = nullptr;
         }
@@ -377,12 +379,14 @@ kDTreeNode *kDTree::removeRec(kDTreeNode *node, const vector<int> &point, int de
             { // node has right child
                 kDTreeNode *tmp = findMin(node->right, axis, depth + 1);
                 node->data = tmp->data;
+                node->label = tmp->label;
                 node->right = removeRec(node->right, tmp->data, depth + 1);
             }
             else
             { // node has only left child
                 kDTreeNode *tmp = findMin(node->left, axis, depth + 1);
                 node->data = tmp->data;
+                node->label = tmp->label;
                 node->left = removeRec(node->left, tmp->data, depth + 1);
             }
         }
@@ -392,8 +396,13 @@ kDTreeNode *kDTree::removeRec(kDTreeNode *node, const vector<int> &point, int de
         // Need to handle the case where the finding node is iddiot
         if (point[axis] < node->data[axis])
             node->left = removeRec(node->left, point, depth + 1);
-        else
+        else if (point[axis] > node->data[axis])
             node->right = removeRec(node->right, point, depth + 1);
+        else
+        {
+            node->left = removeRec(node->left, point, depth + 1);
+            node->right = removeRec(node->right, point, depth + 1);
+        }
     }
 
     return node;
@@ -432,11 +441,11 @@ kDTreeNode *kDTree::NNRec(const vector<int> &target, kDTreeNode *node, int depth
     kDTreeNode *other_node = nullptr;
     int axis = depth % k;
 
-    next_node = (target[axis] < node->data[axis]) ? node->left : node->right;
-    other_node = (target[axis] < node->data[axis]) ? node->right : node->left;
+    next_node = (target[axis] <= node->data[axis]) ? node->left : node->right;
+    other_node = (target[axis] <= node->data[axis]) ? node->right : node->left;
 
     kDTreeNode *best = nearest(target, NNRec(target, next_node, depth + 1), node);
-    if (this->distance(target, best->data) >= (target[axis] - node->data[axis]))
+    if (this->distance(target, best->data) > (target[axis] - node->data[axis]))
     {
         best = nearest(target, NNRec(target, other_node, depth + 1), best);
     }
@@ -471,7 +480,6 @@ kNN::kNN(int k)
 kNN::~kNN()
 {
     tree->clear();
-
 }
 
 /* Start research from 03.05.2024. Please work */
@@ -509,7 +517,7 @@ Dataset kNN::predict(Dataset &X_test)
     }
     for (auto i : data)
     {
-        vector<kDTreeNode *> best; //leak memory warning
+        vector<kDTreeNode *> best; // leak memory warning
         tree->kNearestNeighbour(i, this->k, best);
         int sort_label[10] = {0};
         for (auto j : best)
@@ -519,11 +527,14 @@ Dataset kNN::predict(Dataset &X_test)
         {
             if (sort_label[k] > sort_label[max_index])
                 max_index = k;
-            cout << sort_label[k] << " ";
         }
-        cout << endl;
         list<int> max = {max_index};
         y_pred->data.push_back(max);
+        for (auto j : best)
+        {
+            j->data.clear();
+            delete j;
+        }
     }
     return *y_pred;
 }
@@ -540,6 +551,5 @@ double kNN::score(const Dataset &y_test, const Dataset &y_pred)
         if (*i->begin() == *j->begin())
             correctCount++;
     }
-    cout << correctCount << " " << totalCount << endl;
     return correctCount / totalCount;
 }
