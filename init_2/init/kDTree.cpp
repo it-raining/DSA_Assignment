@@ -29,7 +29,7 @@ void merge(vector<vector<int>> &vec, vector<int> &label, int l, int m, int r, in
     k = l; // Initial index of middle subvector
     while (i < n1 && j < n2)
     {
-        if (L[i][axis] <= R[j][axis])
+        if (L[i][axis] <= R[j][axis])  // carefully the equal
         {
             vec[k] = L[i];
             label[k] = L_label[i];
@@ -96,7 +96,7 @@ void print_vector(vector<int> arr, int size)
     cout << "(";
     for (int i = 0; i < size; ++i)
     {
-        cout << (static_cast<int>(i) ? "," : "") << arr[i];
+        cout << (static_cast<int>(i) ? ", " : "") << arr[i];
     }
     cout << ")";
 }
@@ -298,7 +298,7 @@ kDTreeNode *kDTree::buildTreeRec(vector<vector<int>> &points, int start, int end
         return nullptr;
     }
     int axis = depth % k;
-    vector<int> tmp(0, 0);
+    vector<int> tmp(points.size(), 0);
     mergeSort(points, tmp, start, end, axis);
 
     int mid = start + (end - start) / 2;
@@ -442,7 +442,7 @@ kDTreeNode *kDTree::NNRec(const vector<int> &target, kDTreeNode *node, int depth
     }
     return best;
 }
-void kDTree::nearestNeighbour(const vector<int> &target, kDTreeNode *best)
+void kDTree::nearestNeighbour(const vector<int> &target, kDTreeNode *&best)
 {
     best = NNRec(target, root, 0);
 }
@@ -471,6 +471,7 @@ kNN::kNN(int k)
 kNN::~kNN()
 {
     tree->clear();
+
 }
 
 /* Start research from 03.05.2024. Please work */
@@ -491,7 +492,7 @@ void kNN::fit(Dataset &X_train, Dataset &y_train)
     }
     if (this->tree == nullptr)
     {
-        this->tree = new kDTree(X_train.data.size());+
+        this->tree = new kDTree(X_train.data.size());
     }
 
     this->tree->buildTree(data, label);
@@ -508,17 +509,19 @@ Dataset kNN::predict(Dataset &X_test)
     }
     for (auto i : data)
     {
-        vector<kDTreeNode *> best;
+        vector<kDTreeNode *> best; //leak memory warning
         tree->kNearestNeighbour(i, this->k, best);
         int sort_label[10] = {0};
         for (auto j : best)
             sort_label[j->label]++;
         int max_index = 0;
-        for (int k = 1; k < 10; k++)
+        for (int k = 0; k < 10; k++)
         {
             if (sort_label[k] > sort_label[max_index])
                 max_index = k;
+            cout << sort_label[k] << " ";
         }
+        cout << endl;
         list<int> max = {max_index};
         y_pred->data.push_back(max);
     }
@@ -530,12 +533,13 @@ Dataset kNN::predict(Dataset &X_test)
 double kNN::score(const Dataset &y_test, const Dataset &y_pred)
 {
     double correctCount = 0;
-    int totalCount = y_test.data.size();
+    double totalCount = y_test.data.size();
     for (auto i = y_test.data.begin(), j = y_pred.data.begin();
          i != y_test.data.end() && j != y_pred.data.end(); i++, j++)
     {
         if (*i->begin() == *j->begin())
             correctCount++;
     }
+    cout << correctCount << " " << totalCount << endl;
     return correctCount / totalCount;
 }

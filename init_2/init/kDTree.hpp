@@ -17,6 +17,20 @@ struct kDTreeNode
         this->right = right;
     }
     bool operator==(const kDTreeNode &b);
+    friend ostream &operator<<(ostream &os, const kDTreeNode &node)
+    {
+        os << "(";
+        for (int i = 0; i < node.data.size(); i++)
+        {
+            os << node.data[i];
+            if (i != node.data.size() - 1)
+            {
+                os << ", ";
+            }
+        }
+        os << ")";
+        return os;
+    }
 };
 struct NodeDist
 {
@@ -53,7 +67,7 @@ public:
     bool search(const vector<int> &point);
     void buildTree(const vector<vector<int>> &pointList);
     void buildTree(const vector<vector<int>> &pointList, vector<int> &label);
-    void nearestNeighbour(const vector<int> &target, kDTreeNode *best);
+    void nearestNeighbour(const vector<int> &target, kDTreeNode *&best);
     void kNearestNeighbour(const vector<int> &target, int k, vector<kDTreeNode *> &bestList);
 
     /// Support functions
