@@ -69,7 +69,7 @@ public:
     void buildTree(const vector<vector<int>> &pointList, vector<int> &label);
     void nearestNeighbour(const vector<int> &target, kDTreeNode *&best);
     void kNearestNeighbour(const vector<int> &target, int k, vector<kDTreeNode *> &bestList);
-
+ 
     /// Support functions
     bool operator==(const kDTree &other) const;
     void inorderTraversalRec(kDTreeNode *node) const;

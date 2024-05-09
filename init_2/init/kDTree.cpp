@@ -404,7 +404,7 @@ kDTreeNode *kDTree::removeRec(kDTreeNode *node, const vector<int> &point, int de
             node->right = removeRec(node->right, point, depth + 1);
         }
     }
-
+ 
     return node;
 }
 void kDTree::remove(const vector<int> &point)
