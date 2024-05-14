@@ -289,6 +289,7 @@ kDTreeNode *kDTree::buildTreeRec(vector<vector<int>> &points, vector<int> &label
 void kDTree::buildTree(const vector<vector<int>> &pointList, vector<int> &label)
 {
     vector<vector<int>> points = pointList;
+    this->clear();
     root = buildTreeRec(points, label, 0, points.size() - 1, 0);
 }
 kDTreeNode *kDTree::buildTreeRec(vector<vector<int>> &points, int start, int end, int depth)
@@ -312,6 +313,7 @@ kDTreeNode *kDTree::buildTreeRec(vector<vector<int>> &points, int start, int end
 void kDTree::buildTree(const vector<vector<int>> &pointList)
 {
     vector<vector<int>> points = pointList;
+    this->clear();
     root = buildTreeRec(points, 0, points.size() - 1, 0);
 }
 bool kDTree::searchRec(kDTreeNode *node, const vector<int> &point, int depth)
@@ -387,7 +389,9 @@ kDTreeNode *kDTree::removeRec(kDTreeNode *node, const vector<int> &point, int de
                 kDTreeNode *tmp = findMin(node->left, axis, depth + 1);
                 node->data = tmp->data;
                 node->label = tmp->label;
-                node->left = removeRec(node->left, tmp->data, depth + 1);
+                node->right = node->left;
+                node->left = nullptr;
+                node->right = removeRec(node->right, tmp->data, depth + 1);
             }
         }
     }
